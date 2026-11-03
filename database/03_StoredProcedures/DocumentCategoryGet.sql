@@ -1,0 +1,30 @@
+/* =============================================================
+   Procedure : DocumentCategoryGet
+   Module    : Document Management
+   Purpose   : Category list (dropdowns, category master page)
+   Params    : @IsActive  NULL = all, 'Y' = active only
+   Example   : EXEC DocumentCategoryGet 'Y';
+   ============================================================= */
+USE IAL_QC;
+GO
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
+CREATE OR ALTER PROCEDURE dbo.DocumentCategoryGet
+    @IsActive CHAR(1) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        SELECT CategoryID, CategoryCode, CategoryName, CategoryDesc, IsActive, CreatedOn, ModifiedOn
+        FROM dbo.DocumentCategory
+        WHERE (@IsActive IS NULL OR IsActive = @IsActive)
+        ORDER BY CategoryName;
+    END TRY
+    BEGIN CATCH
+        DECLARE @ErrorMessage VARCHAR(500) = ERROR_MESSAGE();
+        RAISERROR (@ErrorMessage, 11, 1);
+    END CATCH;
+END
+GO
