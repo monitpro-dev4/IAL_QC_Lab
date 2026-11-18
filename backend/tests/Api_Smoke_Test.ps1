@@ -115,7 +115,7 @@ $out = Join-Path $tmp "dl.pdf"
 & curl.exe -s -o $out -H "Authorization: Bearer $E" "$api/Document/DocumentDownload?versionId=$v1"
 Check "Employee downloads approved file" ((Get-Content $out -Raw) -eq (Get-Content $pdf1 -Raw))
 
-$nv = Form "Document/DocumentVersionCreate" $C @{ DocumentID = $doc.id; ChangeSummary = "Updated limits" } $pdf1
+$nv = Form "Document/DocumentVersionCreate" $C @{ DocumentID = $doc.id; ChangeSummary = "Updated limits"; ReasonForChange = "Yearly review" } $pdf1
 Call POST "Document/DocumentVersionSubmit" $C @{ versionID = $nv.id } | Out-Null
 Check "Reject needs comments" ((Call POST "Document/DocumentVersionApprove" $S @{ versionID = $nv.id; action = "Rejected" }).Body.errorMessage -eq "Comments Are Required When Rejecting")
 Call POST "Document/DocumentVersionApprove" $S @{ versionID = $nv.id; action = "Rejected"; comments = "Wrong file" } | Out-Null

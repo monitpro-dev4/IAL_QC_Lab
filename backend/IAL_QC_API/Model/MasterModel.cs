@@ -15,6 +15,22 @@ namespace IAL_QC_API.Model
 
     //=========================== Document categories ===========================
 
+    /// <summary>Department dropdown item.</summary>
+    public class DepartmentModel
+    {
+        public int DepartmentID { get; set; }
+        public string DepartmentName { get; set; }
+        public string IsActive { get; set; } = "Y";
+    }
+
+    /// <summary>Plant / Area dropdown item.</summary>
+    public class PlantAreaModel
+    {
+        public int PlantAreaID { get; set; }
+        public string PlantAreaName { get; set; }
+        public string IsActive { get; set; } = "Y";
+    }
+
     public class DocumentCategoryModel
     {
         public int CategoryID { get; set; }

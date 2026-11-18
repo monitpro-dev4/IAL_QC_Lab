@@ -10,17 +10,22 @@ export default function RevisionDialog({ open, mode, initialTitle, initialSummar
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
+  const [reason, setReason] = useState("");
   const [error, setError] = useState("");
+  const [touched, setTouched] = useState(false);
 
   useEffect(() => {
-    if (open) { setFile(null); setTitle(initialTitle || ""); setSummary(initialSummary || ""); setError(""); }
+    if (open) { setFile(null); setTitle(initialTitle || ""); setSummary(initialSummary || ""); setReason(""); setError(""); setTouched(false); }
   }, [open, initialTitle, initialSummary]);
 
   const isNew = mode === "new";
+  const summaryMissing = touched && !summary.trim();
   const save = () => {
-    if (isNew && !file) return setError("Choose the file for the new revision.");
+    setTouched(true);
+    if (isNew && !file) setError("Choose the file for the new revision.");
+    if (!summary.trim() || (isNew && !file)) return;
     if (!isNew && !title.trim()) return setError("");
-    onSave({ file, title: title.trim(), summary: summary.trim() });
+    onSave({ file, title: title.trim(), summary: summary.trim(), reason: reason.trim() });
   };
 
   return (
@@ -33,13 +38,25 @@ export default function RevisionDialog({ open, mode, initialTitle, initialSummar
               error={!title.trim()} helperText={!title.trim() ? "Title is required." : " "} slotProps={{ htmlInput: { maxLength: 200 } }} />
           )}
           <TextField
-            label="What changed"
+            label="Change summary"
+            required
             multiline minRows={2}
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
-            helperText="Shown in the document's history, e.g. “Updated calibration limits in section 4”."
+            error={summaryMissing}
+            helperText={summaryMissing ? "Enter the change summary." : "What was changed, e.g. “Updated calibration limits in section 4”."}
             slotProps={{ htmlInput: { maxLength: 500 } }}
           />
+          {isNew && (
+            <TextField
+              label="Reason for change"
+              multiline minRows={2}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              helperText="Optional. Why it was changed, e.g. “New ISO 17025 requirement”."
+              slotProps={{ htmlInput: { maxLength: 500 } }}
+            />
+          )}
           <FilePicker file={file} onChange={(f) => { setFile(f); setError(""); }} error={error} />
           {!isNew && !file && <span style={{ fontSize: 14, color: "#56636A" }}>Leave the file empty to keep the current one.</span>}
         </Stack>

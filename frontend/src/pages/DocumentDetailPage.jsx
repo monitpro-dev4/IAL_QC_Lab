@@ -14,7 +14,8 @@ import ApprovalTrack from "../components/ApprovalTrack";
 import StatusChip from "../components/StatusChip";
 import DecisionDialog from "../components/DecisionDialog";
 import RevisionDialog from "../components/RevisionDialog";
-import { approvedByName, fmtDate, fmtDateTime, fmtSize } from "../format";
+import { approvedByName, approvedDate, reviewedByName, reviewedDate, fmtDate, fmtDateTime, fmtSize } from "../format";
+import EllipsisText from "../components/EllipsisText";
 import { colors } from "../theme";
 
 function Field({ label, children }) {
@@ -96,7 +97,8 @@ export default function DocumentDetailPage() {
   const canManage = pen && pen.statusName === "Supervisor Approved" && isManager;
   const canRevise = active && canEditDocuments && pen && (pen.statusName === "Draft" || pen.statusName === "Rejected");
   const canSubmit = active && canEditDocuments && pen && pen.statusName === "Draft";
-  const canNewRevision = active && canEditDocuments;   // any time; a waiting or rejected revision is kept as Superseded
+  // any time (a waiting or rejected revision is kept as Superseded), but not while the document is archived
+  const canNewRevision = active && canEditDocuments && cur?.statusName !== "Archived";
   const docLabel = `${doc.documentNumber}, ${doc.title}${pen ? `, revision ${pen.revisionNo}` : ""}`;
 
   return (
@@ -126,8 +128,10 @@ export default function DocumentDetailPage() {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Rev</TableCell><TableCell>Status</TableCell><TableCell>Prepared by</TableCell>
-                  <TableCell>Approved by</TableCell><TableCell>What changed</TableCell><TableCell>File</TableCell>
+                  <TableCell>Rev</TableCell><TableCell>Status</TableCell>
+                  <TableCell>Prepared by</TableCell><TableCell>Prepared date</TableCell>
+                  <TableCell>Reviewed by</TableCell><TableCell>Reviewed date</TableCell>
+                  <TableCell>Approved by</TableCell><TableCell>Approved date</TableCell><TableCell>Change summary</TableCell><TableCell>Reason for change</TableCell><TableCell>File</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -136,8 +140,13 @@ export default function DocumentDetailPage() {
                     <TableCell sx={{ fontWeight: 600 }}>{v.revisionNo}</TableCell>
                     <TableCell><StatusChip status={v.statusName} /></TableCell>
                     <TableCell>{v.editedBy}</TableCell>
-                    <TableCell>{approvedByName(v.statusName, v.approvedBy, v.reviewedBy)}</TableCell>
-                    <TableCell sx={{ maxWidth: 280 }}>{v.changeSummary}</TableCell>
+                    <TableCell sx={{ whiteSpace: "nowrap" }}>{fmtDate(v.createdOn)}</TableCell>
+                    <TableCell>{reviewedByName(v.statusName, v.reviewedBy, v.approvedBy)}</TableCell>
+                    <TableCell sx={{ whiteSpace: "nowrap" }}>{reviewedDate(v.statusName, v.approvedBy, v.reviewedOn)}</TableCell>
+                    <TableCell>{approvedByName(v.statusName, v.approvedBy)}</TableCell>
+                    <TableCell sx={{ whiteSpace: "nowrap" }}>{approvedDate(v.statusName, v.approvedBy, v.approvedOn)}</TableCell>
+                    <TableCell><EllipsisText text={v.changeSummary} /></TableCell>
+                    <TableCell><EllipsisText text={v.reasonForChange} /></TableCell>
                     <TableCell>
                       <Link component="button" variant="body2"
                         onClick={() => openFile(v.versionID, v.originalFileName).catch((e) => enqueueSnackbar(e.message, { variant: "error" }))}>
@@ -171,9 +180,9 @@ export default function DocumentDetailPage() {
         initialSummary={revisionMode === "edit" ? pen?.changeSummary : ""}
         busy={busy}
         onCancel={() => setRevisionMode(null)}
-        onSave={({ file, title, summary }) => run(
+        onSave={({ file, title, summary, reason }) => run(
           () => revisionMode === "new"
-            ? createRevision({ documentID: doc.documentID, changeSummary: summary, userID: user.userID, file })
+            ? createRevision({ documentID: doc.documentID, changeSummary: summary, reasonForChange: reason, userID: user.userID, file })
                 .then((res) => submitRevision(res.id, user.userID))
             : updateRevision({ versionID: pen.versionID, title, changeSummary: summary, userID: user.userID, file }),
           revisionMode === "new" ? "New revision sent to the Lab Supervisor" : "Revision saved as draft"

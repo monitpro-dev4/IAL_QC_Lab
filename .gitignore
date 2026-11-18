@@ -24,3 +24,6 @@ Thumbs.db
 .vs/
 .vscode/
 .idea/
+
+# Deployment output (published builds, packages)
+deployment/

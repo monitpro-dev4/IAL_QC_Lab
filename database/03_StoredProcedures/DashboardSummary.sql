@@ -9,6 +9,9 @@
    Returns   : Result 1 = counts (one row)
                Result 2 = approved documents per category
                Result 3 = recent activity (latest 10)
+               Result 4 = last 6 months: uploaded / approved / rejected per month
+                          (employees: approved only)           -- added 2026-11-18
+               Result 5 = average approval times in hours        -- added 2026-11-18
    Example   : EXEC DashboardSummary 12, 1;
    ============================================================= */
 USE IAL_QC;
@@ -33,8 +36,9 @@ BEGIN
 
         -- 1. Counts (active documents only)
         SELECT
-            ApprovedDocuments = (SELECT COUNT(*) FROM dbo.Document
-                                 WHERE IsActive = 'Y' AND CurrentVersionID IS NOT NULL),
+            ApprovedDocuments = (SELECT COUNT(*) FROM dbo.Document d
+                                 JOIN dbo.DocumentVersion cv ON cv.VersionID = d.CurrentVersionID AND cv.StatusID = 4
+                                 WHERE d.IsActive = 'Y'),
             InReview          = CASE WHEN @CanViewDrafts = 1 THEN
                                 (SELECT COUNT(*) FROM dbo.DocumentVersion v JOIN dbo.Document d ON d.DocumentID = v.DocumentID
                                  WHERE d.IsActive = 'Y' AND v.StatusID IN (2, 3)) ELSE 0 END,
@@ -73,6 +77,42 @@ BEGIN
         JOIN dbo.UserMaster u ON u.UserID = l.ActionBy
         WHERE @CanViewDrafts = 1 OR (l.ActionType = 'Approved' AND l.ApprovalLevel = 2)
         ORDER BY l.ActionOn DESC, l.LogID DESC;
+
+        -- 4. Last 6 months (this month included): revisions uploaded, final approvals, rejections
+        DECLARE @From DATE = DATEADD(MONTH, -5, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1));
+        ;WITH m AS (
+            SELECT MonthStart = @From
+            UNION ALL
+            SELECT DATEADD(MONTH, 1, MonthStart) FROM m WHERE MonthStart < DATEADD(MONTH, 5, @From)
+        )
+        SELECT m.MonthStart,
+               Uploaded = CASE WHEN @CanViewDrafts = 1 THEN
+                          (SELECT COUNT(*) FROM dbo.DocumentVersion v JOIN dbo.Document d ON d.DocumentID = v.DocumentID
+                           WHERE d.IsActive = 'Y' AND v.CreatedOn >= m.MonthStart AND v.CreatedOn < DATEADD(MONTH, 1, m.MonthStart)) ELSE 0 END,
+               Approved = (SELECT COUNT(*) FROM dbo.DocumentApprovalLog l
+                           JOIN dbo.DocumentVersion v ON v.VersionID = l.VersionID
+                           JOIN dbo.Document d ON d.DocumentID = v.DocumentID AND d.IsActive = 'Y'
+                           WHERE l.ActionType = 'Approved' AND l.ApprovalLevel = 2
+                             AND l.ActionOn >= m.MonthStart AND l.ActionOn < DATEADD(MONTH, 1, m.MonthStart)),
+               Rejected = CASE WHEN @CanViewDrafts = 1 THEN
+                          (SELECT COUNT(*) FROM dbo.DocumentApprovalLog l
+                           JOIN dbo.DocumentVersion v ON v.VersionID = l.VersionID
+                           JOIN dbo.Document d ON d.DocumentID = v.DocumentID AND d.IsActive = 'Y'
+                           WHERE l.ActionType = 'Rejected'
+                             AND l.ActionOn >= m.MonthStart AND l.ActionOn < DATEADD(MONTH, 1, m.MonthStart)) ELSE 0 END
+        FROM m
+        ORDER BY m.MonthStart;
+
+        -- 5. Average approval times (hours) over every revision that reached final approval
+        SELECT ApprovedRevisions = COUNT(*),
+               AvgTotalHours     = AVG(CAST(DATEDIFF(MINUTE, ISNULL(v.SubmittedOn, v.CreatedOn), v.ApprovedOn) AS DECIMAL(12, 2)) / 60),
+               AvgReviewHours    = AVG(CASE WHEN v.ReviewedOn IS NOT NULL
+                                            THEN CAST(DATEDIFF(MINUTE, ISNULL(v.SubmittedOn, v.CreatedOn), v.ReviewedOn) AS DECIMAL(12, 2)) / 60 END),
+               AvgManagerHours   = AVG(CASE WHEN v.ReviewedOn IS NOT NULL
+                                            THEN CAST(DATEDIFF(MINUTE, v.ReviewedOn, v.ApprovedOn) AS DECIMAL(12, 2)) / 60 END)
+        FROM dbo.DocumentVersion v
+        JOIN dbo.Document d ON d.DocumentID = v.DocumentID AND d.IsActive = 'Y'
+        WHERE v.ApprovedOn IS NOT NULL;
     END TRY
     BEGIN CATCH
         DECLARE @ErrorMessage VARCHAR(500) = ERROR_MESSAGE();

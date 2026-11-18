@@ -8,6 +8,10 @@ namespace IAL_QC_API.Model
         public string DocumentNumber { get; set; }
         public string Title { get; set; }
         public int CategoryID { get; set; }
+        public string Department { get; set; }
+        public string PlantArea { get; set; }
+        /// <summary>The document's remarks (not a revision's change summary).</summary>
+        public string Remarks { get; set; }
         /// <summary>Starting revision. 1 for a new document; the current revision for an existing ISO document.</summary>
         public int RevisionNo { get; set; } = 1;
         public string ChangeSummary { get; set; }
@@ -22,6 +26,7 @@ namespace IAL_QC_API.Model
         /// <summary>Optional new title for the document; empty = keep the current title.</summary>
         public string Title { get; set; }
         public string ChangeSummary { get; set; }
+        public string ReasonForChange { get; set; }
         public int UserID { get; set; }
         public IFormFile File { get; set; }
     }
@@ -83,6 +88,10 @@ namespace IAL_QC_API.Model
         public int? PendingVersionID { get; set; }
         public int? PendingRevisionNo { get; set; }
         public string PendingStatus { get; set; }
+        /// <summary>Remarks / what changed, of the revision shown in the list.</summary>
+        public string ChangeSummary { get; set; }
+        public string Department { get; set; }
+        public string PlantArea { get; set; }
     }
 
     /// <summary>A revision of a document (current, pending, or in history).</summary>
@@ -96,6 +105,7 @@ namespace IAL_QC_API.Model
         public string FileType { get; set; }
         public int? FileSizeKB { get; set; }
         public string ChangeSummary { get; set; }
+        public string ReasonForChange { get; set; }
         public string EditedBy { get; set; }
         public int? EditedByUserID { get; set; }
         public DateTime? CreatedOn { get; set; }
@@ -115,6 +125,9 @@ namespace IAL_QC_API.Model
         public int CategoryID { get; set; }
         public string CategoryCode { get; set; }
         public string CategoryName { get; set; }
+        public string Department { get; set; }
+        public string PlantArea { get; set; }
+        public string Remarks { get; set; }
         public string IsActive { get; set; }
         public DateTime? CreatedOn { get; set; }
         public string CreatedBy { get; set; }
@@ -157,6 +170,7 @@ namespace IAL_QC_API.Model
         public string OriginalFileName { get; set; }
         public string FileType { get; set; }
         public string ChangeSummary { get; set; }
+        public string ReasonForChange { get; set; }
         public string EditedBy { get; set; }
         public DateTime? SubmittedOn { get; set; }
         public string ReviewedBy { get; set; }

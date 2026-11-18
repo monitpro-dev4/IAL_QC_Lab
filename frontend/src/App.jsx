@@ -39,6 +39,7 @@ export default function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="/documents" element={<DocumentListPage />} />
+        <Route path="/archived" element={<Navigate to="/documents?tab=archived" replace />} />
         <Route path="/documents/new" element={<Navigate to="/documents" replace />} />
         <Route path="/documents/:id" element={<DocumentDetailPage />} />
         <Route path="/approvals" element={<Navigate to="/documents" replace />} />

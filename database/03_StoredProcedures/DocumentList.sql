@@ -43,7 +43,9 @@ BEGIN
                v.IssuedDate,
                PendingVersionID  = p.VersionID,
                PendingRevisionNo = p.RevisionNo,
-               PendingStatus     = ps.StatusName
+               PendingStatus     = ps.StatusName,
+               v.ChangeSummary,                     -- "Remarks" in the list (added 2026-11-11)
+               d.Department, d.PlantArea            -- added 2026-11-17
         FROM dbo.Document d
         LEFT JOIN dbo.DocumentCategory c ON c.CategoryID = d.CategoryID
         OUTER APPLY (SELECT TOP 1 x.*
@@ -51,7 +53,14 @@ BEGIN
                      WHERE x.DocumentID = d.DocumentID
                        -- full list: the latest uploaded revision; approved-only list: the current approved one
                        AND (@ApprovedOnly = 0 OR x.VersionID = d.CurrentVersionID)
-                     ORDER BY x.RevisionNo DESC) v
+                     -- ...except when the latest revision was cancelled and an approved (or archived) version
+                     -- exists: that version is still the one in use, so it is shown instead
+                     ORDER BY CASE WHEN d.CurrentVersionID IS NOT NULL
+                                    AND (SELECT TOP 1 z.StatusID FROM dbo.DocumentVersion z
+                                         WHERE z.DocumentID = d.DocumentID ORDER BY z.RevisionNo DESC) = 7
+                                   THEN CASE WHEN x.VersionID = d.CurrentVersionID THEN 0 ELSE 1 END
+                                   ELSE 0 END,
+                              x.RevisionNo DESC) v
         LEFT JOIN dbo.DocumentStatusMaster s ON s.StatusID = v.StatusID
         LEFT JOIN dbo.UserMaster ue ON ue.UserID = v.EditedBy
         LEFT JOIN dbo.UserMaster ur ON ur.UserID = v.ReviewedBy
@@ -63,7 +72,8 @@ BEGIN
                        AND d.CurrentVersionID IS NOT NULL
                      ORDER BY y.RevisionNo DESC) p
         LEFT JOIN dbo.DocumentStatusMaster ps ON ps.StatusID = p.StatusID
-        WHERE (@ApprovedOnly = 0 OR d.CurrentVersionID IS NOT NULL)
+        WHERE (@ApprovedOnly = 0 OR EXISTS (SELECT 1 FROM dbo.DocumentVersion cv
+                                            WHERE cv.VersionID = d.CurrentVersionID AND cv.StatusID = 4))
           AND (@IsActive IS NULL OR d.IsActive = @IsActive)
           AND (ISNULL(@CategoryID, 0) = 0 OR d.CategoryID = @CategoryID)
           AND (@Search IS NULL

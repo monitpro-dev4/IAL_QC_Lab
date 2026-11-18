@@ -30,6 +30,9 @@ namespace IAL_QC_API.DAL
                 cmd.Add("@FileSizeKB", file.FileSizeKB);
                 cmd.Add("@ChangeSummary", model.ChangeSummary);
                 cmd.Add("@UserID", model.UserID);
+                cmd.Add("@Department", model.Department);
+                cmd.Add("@PlantArea", model.PlantArea);
+                cmd.Add("@Remarks", model.Remarks);
                 SqlParameter docId = cmd.AddOutputInt("@NewDocumentID");
                 SqlParameter verId = cmd.AddOutputInt("@NewVersionID");
                 conn.Open();
@@ -53,6 +56,7 @@ namespace IAL_QC_API.DAL
                 using SqlCommand cmd = DBHelper.StoredProcedure("[DocumentVersionCreate]", conn);
                 cmd.Add("@DocumentID", model.DocumentID);
                 cmd.Add("@Title", model.Title);
+                cmd.Add("@ReasonForChange", model.ReasonForChange);
                 cmd.Add("@OriginalFileName", file.OriginalFileName);
                 cmd.Add("@StoredFileName", file.StoredFileName);
                 cmd.Add("@FilePath", file.RelativeFolder);
@@ -143,6 +147,29 @@ namespace IAL_QC_API.DAL
             return response;
         }
 
+        /// <summary>Lab Manager: Action = "Cancel", "Archive" or "Restore".</summary>
+        public APIResponse DocumentStatusChange(DocumentApproveModel model, SqlConnection conn)
+        {
+            var response = new APIResponse { ID = model.VersionID };
+            try
+            {
+                using SqlCommand cmd = DBHelper.StoredProcedure("[DocumentStatusChange]", conn);
+                cmd.Add("@VersionID", model.VersionID);
+                cmd.Add("@Action", model.Action);
+                cmd.Add("@Comments", model.Comments);
+                cmd.Add("@UserID", model.UserID);
+                conn.Open();
+                cmd.ExecuteNonQuery();
+                response.Response = model.Action == "Cancel" ? "Document Cancelled"
+                                  : model.Action == "Archive" ? "Document Archived" : "Document Restored";
+            }
+            catch (Exception ex)
+            {
+                response.ErrorMessage = ex.Message;
+            }
+            return response;
+        }
+
         public APIResponse DocumentActiveStatusUpdate(DocumentStatusModel model, SqlConnection conn)
         {
             var response = new APIResponse { ID = model.DocumentID };
@@ -198,7 +225,10 @@ namespace IAL_QC_API.DAL
                     IssuedDate = r.NDate("IssuedDate"),
                     PendingVersionID = r.NInt("PendingVersionID"),
                     PendingRevisionNo = r.NInt("PendingRevisionNo"),
-                    PendingStatus = r.Str("PendingStatus")
+                    PendingStatus = r.Str("PendingStatus"),
+                    ChangeSummary = r.Str("ChangeSummary"),
+                    Department = r.Str("Department"),
+                    PlantArea = r.Str("PlantArea")
                 });
             }
             return list;
@@ -224,6 +254,9 @@ namespace IAL_QC_API.DAL
                 model.CategoryID = r.Int("CategoryID");
                 model.CategoryCode = r.Str("CategoryCode");
                 model.CategoryName = r.Str("CategoryName");
+                model.Department = r.Str("Department");
+                model.PlantArea = r.Str("PlantArea");
+                model.Remarks = r.Str("Remarks");
                 model.IsActive = r.Str("IsActive");
                 model.CreatedOn = r.NDate("CreatedOn");
                 model.CreatedBy = r.Str("CreatedBy");
@@ -238,6 +271,7 @@ namespace IAL_QC_API.DAL
                         FileType = r.Str("FileType"),
                         FileSizeKB = r.NInt("FileSizeKB"),
                         ChangeSummary = r.Str("ChangeSummary"),
+                        ReasonForChange = r.Str("ReasonForChange"),
                         EditedBy = r.Str("EditedBy"),
                         ReviewedBy = r.Str("ReviewedBy"),
                         ReviewedOn = r.NDate("ReviewedOn"),
@@ -260,6 +294,7 @@ namespace IAL_QC_API.DAL
                         FileType = r.Str("FileType"),
                         FileSizeKB = r.NInt("FileSizeKB"),
                         ChangeSummary = r.Str("ChangeSummary"),
+                        ReasonForChange = r.Str("ReasonForChange"),
                         EditedBy = r.Str("EditedBy"),
                         EditedByUserID = r.NInt("EditedByUserID"),
                         SubmittedOn = r.NDate("SubmittedOn"),
@@ -294,6 +329,7 @@ namespace IAL_QC_API.DAL
                     FileType = r.Str("FileType"),
                     FileSizeKB = r.NInt("FileSizeKB"),
                     ChangeSummary = r.Str("ChangeSummary"),
+                    ReasonForChange = r.Str("ReasonForChange"),
                     EditedBy = r.Str("EditedBy"),
                     CreatedOn = r.NDate("CreatedOn"),
                     SubmittedOn = r.NDate("SubmittedOn"),

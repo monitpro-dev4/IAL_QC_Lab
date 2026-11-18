@@ -1,5 +1,6 @@
 using IAL_QC_API.DAL;
 using IAL_QC_API.Model;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Data.SqlClient;
@@ -55,6 +56,8 @@ namespace IAL_QC_API.Controllers
         public async Task<APIResponse> DocumentVersionCreate([FromForm] DocumentVersionCreateModel model)
         {
             model.UserID = User.UserId();
+            // Every new revision needs a change summary (the reason for change is optional)
+            if (string.IsNullOrWhiteSpace(model.ChangeSummary)) return new APIResponse { ErrorMessage = "Change Summary Is Required" };
             string error = _files.Validate(model.File);
             if (error != string.Empty) return new APIResponse { ErrorMessage = error };
 
@@ -113,6 +116,17 @@ namespace IAL_QC_API.Controllers
             model.UserID = User.UserId();
             using SqlConnection conn = GetConnection();
             return dalDocument.DocumentVersionApprove(model, conn);
+        }
+
+        /// <summary>Lab Manager only. Action = "Cancel" (pending revision), "Archive" (approved document) or "Restore" (archived document).</summary>
+        [HttpPost]
+        [Route("DocumentStatusChange")]
+        [Authorize(Roles = AppRoles.LabManager)]
+        public APIResponse DocumentStatusChange(DocumentApproveModel model)
+        {
+            model.UserID = User.UserId();
+            using SqlConnection conn = GetConnection();
+            return dalDocument.DocumentStatusChange(model, conn);
         }
 
         [HttpPost]

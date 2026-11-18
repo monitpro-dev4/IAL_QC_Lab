@@ -20,7 +20,7 @@ BEGIN
         SELECT CategoryID, CategoryCode, CategoryName, CategoryDesc, IsActive, CreatedOn, ModifiedOn
         FROM dbo.DocumentCategory
         WHERE (@IsActive IS NULL OR IsActive = @IsActive)
-        ORDER BY CategoryName;
+        ORDER BY ISNULL(SortOrder, 999), CategoryName;   -- the order set for the dropdown
     END TRY
     BEGIN CATCH
         DECLARE @ErrorMessage VARCHAR(500) = ERROR_MESSAGE();

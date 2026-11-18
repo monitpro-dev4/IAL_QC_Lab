@@ -8,14 +8,19 @@ const tone = {
   Approved: { fg: colors.green, bg: "#E5F2EA" },
   Rejected: { fg: colors.red, bg: "#FBE7E6" },
   Superseded: { fg: colors.inkSoft, bg: "#EEF1EF" },
+  Cancelled: { fg: "#7A4A4A", bg: "#F1E6E6" },
+  Archived: { fg: "#36557F", bg: "#E6EDF6" },
   Active: { fg: colors.green, bg: "#E5F2EA" },
   Inactive: { fg: colors.inkSoft, bg: "#EEF1EF" },
 };
 
 const label = {
-  Submitted: "Waiting for supervisor",
-  "Supervisor Approved": "Waiting for manager",
+  Submitted: "Under Review",
+  "Supervisor Approved": "Under Approval",
 };
+
+/** The label shown for a status, e.g. "Submitted" -> "Under Review". */
+export const statusLabel = (status) => label[status] || status;
 
 export default function StatusChip({ status, prefix }) {
   if (!status) return null;

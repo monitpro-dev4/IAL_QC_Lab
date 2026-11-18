@@ -18,6 +18,9 @@ export const submitRevision = (versionID, userID, comments) =>
   post("/Document/DocumentVersionSubmit", { versionID, userID, comments }).then(notifyPending);
 export const decideRevision = (versionID, action, userID, comments) =>
   post("/Document/DocumentVersionApprove", { versionID, action, userID, comments }).then(notifyPending);
+/** Lab Manager: action = "Cancel", "Archive" or "Restore". */
+export const changeDocumentStatus = (versionID, action, comments) =>
+  post("/Document/DocumentStatusChange", { versionID, action, userID: 0, comments }).then(notifyPending);
 export const setDocumentActive = (documentID, isActive, userID) =>
   post("/Document/DocumentActiveStatusUpdate", { documentID, isActive, userID });
 

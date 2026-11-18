@@ -19,11 +19,11 @@ BEGIN
     SET NOCOUNT ON;
     BEGIN TRY
         SELECT d.DocumentID, d.DocumentNumber, d.Title,
-               c.CategoryID, c.CategoryCode, c.CategoryName, d.IsActive,
+               c.CategoryID, c.CategoryCode, c.CategoryName, d.Department, d.PlantArea, d.Remarks, d.IsActive,
                d.CreatedOn, CreatedBy = uc.Name,
                v.VersionID, v.RevisionNo, VersionStatus = s.StatusName,
                v.OriginalFileName, v.StoredFileName, v.FilePath, v.FileType, v.FileSizeKB,
-               v.ChangeSummary,
+               v.ChangeSummary, v.ReasonForChange,
                EditedBy = ue.Name, ReviewedBy = ur.Name, v.ReviewedOn,
                ApprovedBy = ua.Name, v.ApprovedOn, v.IssuedDate
         FROM dbo.Document d
@@ -38,7 +38,7 @@ BEGIN
 
         SELECT v.VersionID, v.RevisionNo, v.StatusID, StatusName = s.StatusName,
                v.OriginalFileName, v.StoredFileName, v.FilePath, v.FileType, v.FileSizeKB,
-               v.ChangeSummary, EditedBy = ue.Name, v.EditedBy AS EditedByUserID,
+               v.ChangeSummary, v.ReasonForChange, EditedBy = ue.Name, v.EditedBy AS EditedByUserID,
                v.SubmittedOn, ReviewedBy = ur.Name, v.ReviewedOn, v.CreatedOn
         FROM dbo.DocumentVersion v
         JOIN dbo.DocumentStatusMaster s ON s.StatusID = v.StatusID

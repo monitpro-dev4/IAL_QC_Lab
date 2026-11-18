@@ -13,14 +13,10 @@ GO
 
 DECLARE @ID INT;
 
+-- The category list (and its order) is kept in 05_Changes/2026-11-11_002_Document_Department_Categories.sql,
+-- which runs before this seed. This only adds a category if it is missing.
 IF NOT EXISTS (SELECT 1 FROM dbo.DocumentCategory WHERE CategoryCode = 'SOP')
-    EXEC dbo.DocumentCategoryInsertUpdate 0, 'SOP', 'Standard Operating Procedure', 'Lab SOPs, e.g. IAL-SOP-123', 'Y', NULL, @ID OUTPUT;
-IF NOT EXISTS (SELECT 1 FROM dbo.DocumentCategory WHERE CategoryCode = 'ISO')
-    EXEC dbo.DocumentCategoryInsertUpdate 0, 'ISO', 'ISO Document', 'ISO system procedures and manuals', 'Y', NULL, @ID OUTPUT;
-IF NOT EXISTS (SELECT 1 FROM dbo.DocumentCategory WHERE CategoryCode = 'WI')
-    EXEC dbo.DocumentCategoryInsertUpdate 0, 'WI', 'Work Instruction', 'Step-by-step instructions for a single task', 'Y', NULL, @ID OUTPUT;
-IF NOT EXISTS (SELECT 1 FROM dbo.DocumentCategory WHERE CategoryCode = 'FRM')
-    EXEC dbo.DocumentCategoryInsertUpdate 0, 'FRM', 'Form / Format', 'Blank forms and record formats', 'Y', NULL, @ID OUTPUT;
+    EXEC dbo.DocumentCategoryInsertUpdate 0, 'SOP', 'SOPs', 'Standard operating procedures', 'Y', NULL, @ID OUTPUT;
 
 PRINT 'DocumentCategory seed done.';
 GO

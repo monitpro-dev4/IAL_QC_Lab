@@ -78,9 +78,16 @@ Check "Users list: newest first" ($users[0].userName -eq "wf_emp$stamp") $users[
 
 # ---------------- Add document (no category) -> goes to the supervisor
 $num = "WF-$stamp"
-$r = Form "Document/DocumentCreate" $C @{ DocumentNumber = $num; Title = "AC list"; RevisionNo = 1; ChangeSummary = "First issue"; UserID = 0 } $f1
-Check "Chemist adds a document without a category" ($r.errorMessage -eq "" -and $r.id -gt 0) $r.errorMessage
+$cats = @((Call GET "Master/DocumentCategoryGet?isActive=Y" $C).Body)
+Check "Category dropdown comes from the database, in order" (($cats | ForEach-Object categoryName) -join "," -eq "SOPs,Work Instructions,Policies,Manuals,Standards,Forms,Checklists,Drawings,Emergency Procedures,HSE Plans,Other Controlled Documents") (($cats | ForEach-Object categoryName) -join ",")
+$hse = ($cats | Where-Object categoryCode -eq "HSE").categoryID
+$deps = @((Call GET "Master/DepartmentGet?isActive=Y" $C).Body); $areas = @((Call GET "Master/PlantAreaGet?isActive=Y" $C).Body)
+Check "Department and Plant/Area dropdowns come from the database" ($deps[0].departmentName -eq "Quality Control" -and $areas[0].plantAreaName -eq "QC Laboratory" -and $deps.Count -ge 10 -and $areas.Count -ge 10) "$($deps.Count) departments, $($areas.Count) plant/areas"
+$r = Form "Document/DocumentCreate" $C @{ DocumentNumber = $num; Title = "AC list"; CategoryID = $hse; Department = "Quality Control"; PlantArea = "QC Laboratory"; RevisionNo = 1; Remarks = "Full AC list for the plant"; UserID = 0 } $f1
+Check "Chemist adds a document with category and department" ($r.errorMessage -eq "" -and $r.id -gt 0) $r.errorMessage
 $doc = $r.id; $v1 = $r.secondID
+$det = (Call GET "Document/DocumentGetById?documentId=$doc" $C).Body
+Check "Category, department, plant/area and remarks are saved" ($det.categoryName -eq "HSE Plans" -and $det.department -eq "Quality Control" -and $det.plantArea -eq "QC Laboratory" -and $det.remarks -eq "Full AC list for the plant") "$($det.categoryName) / $($det.department) / $($det.plantArea) / $($det.remarks)"
 Check "Sent to the Lab Supervisor" ((Submit $C $v1).errorMessage -eq "")
 $row = (List $C $num)[0]
 Check "List shows it: rev 1, waiting for supervisor, uploaded by chemist" ($row.revisionNo -eq 1 -and $row.versionStatus -eq "Submitted" -and $row.editedBy -eq "WF Chemist") "$($row.revisionNo) $($row.versionStatus) $($row.editedBy)"
@@ -95,8 +102,12 @@ Check "Supervisor rejects with a comment" ((Decide $S $v1 "Rejected" "Section 4 
 Check "List shows Rejected" ((List $C $num)[0].versionStatus -eq "Rejected")
 
 # ---------------- Revision after rejection: new revision, title changed, rev 1 kept
-$r = Form "Document/DocumentVersionCreate" $C @{ DocumentID = $doc; Title = "AC list - full"; ChangeSummary = "Added section 4" } $f2
+$r = Form "Document/DocumentVersionCreate" $C @{ DocumentID = $doc; Title = "AC list - full" } $f2
+Check "Revision needs a change summary" ($r.errorMessage -eq "Change Summary Is Required") $r.errorMessage
+$r = Form "Document/DocumentVersionCreate" $C @{ DocumentID = $doc; ReasonForChange = "Audit finding"; Title = "AC list - full"; ChangeSummary = "Added section 4" } $f2
 Check "Chemist uploads revision 2 with a new title" ($r.errorMessage -eq "" -and $r.id -gt 0) $r.errorMessage
+$rv = ((Call GET "Document/DocumentHistory?documentId=$doc" $C).Body.versions | Where-Object revisionNo -eq 2)
+Check "Reason for change is saved with the revision" ($rv.reasonForChange -eq "Audit finding" -and $rv.changeSummary -eq "Added section 4") "$($rv.changeSummary) / $($rv.reasonForChange)"
 $v2 = $r.id; Submit $C $v2 | Out-Null
 $row = (List $C $num)[0]
 Check "List shows the latest: rev 2, waiting for supervisor, new title" ($row.revisionNo -eq 2 -and $row.versionStatus -eq "Submitted" -and $row.title -eq "AC list - full") "$($row.revisionNo) $($row.versionStatus) $($row.title)"
@@ -104,7 +115,7 @@ Check "List shows the latest: rev 2, waiting for supervisor, new title" ($row.re
 # ---------------- Revision while waiting for the manager
 Check "Supervisor approves rev 2" ((Decide $S $v2 "Approved" "OK").errorMessage -eq "")
 Check "List shows waiting for manager" ((List $C $num)[0].versionStatus -eq "Supervisor Approved")
-$r = Form "Document/DocumentVersionCreate" $C @{ DocumentID = $doc; ChangeSummary = "Corrected limits" } $f3
+$r = Form "Document/DocumentVersionCreate" $C @{ DocumentID = $doc; ReasonForChange = "Test reason"; ChangeSummary = "Corrected limits" } $f3
 $v3 = $r.id; Submit $C $v3 | Out-Null
 $row = (List $C $num)[0]
 Check "Revision 3 while waiting: list shows rev 3 back at the supervisor" ($r.errorMessage -eq "" -and $row.revisionNo -eq 3 -and $row.versionStatus -eq "Submitted") "$($r.errorMessage) $($row.revisionNo) $($row.versionStatus)"
@@ -128,7 +139,7 @@ $got = if (Test-Path $out) { Get-Content $out -Raw } else { "" }
 Check "Rev 1 file still downloads with its own content" ($code -eq "200" -and $got -eq "%PDF-1.4 revision one") "$code $got"
 
 # ---------------- Revision after approval
-$r = Form "Document/DocumentVersionCreate" $C @{ DocumentID = $doc; ChangeSummary = "Yearly review" } $f4
+$r = Form "Document/DocumentVersionCreate" $C @{ DocumentID = $doc; ReasonForChange = "Test reason"; ChangeSummary = "Yearly review" } $f4
 $v4 = $r.id; Submit $C $v4 | Out-Null
 $row = (List $C $num)[0]
 Check "Rev 4 after approval: list shows rev 4 waiting for supervisor" ($row.revisionNo -eq 4 -and $row.versionStatus -eq "Submitted") "$($row.revisionNo) $($row.versionStatus)"
@@ -139,10 +150,44 @@ Check "Rev 3 stays Approved while rev 4 waits" ($st -eq "Approved") $st
 Check "Chemist (not an approver) cannot approve rev 4" ((Decide $C $v4 "Approved" "").errorMessage -ne "")
 
 # ---------------- Self-approval: a supervisor can approve a revision they uploaded
-$r = Form "Document/DocumentVersionCreate" $S @{ DocumentID = $doc; ChangeSummary = "Supervisor update" } $f1
+$r = Form "Document/DocumentVersionCreate" $S @{ DocumentID = $doc; ReasonForChange = "Test reason"; ChangeSummary = "Supervisor update" } $f1
 $v5 = $r.id; Submit $S $v5 | Out-Null
 $res = Decide $S $v5 "Approved" ""
 Check "Supervisor approves own upload" ($res.errorMessage -eq "" -and (List $C $num)[0].versionStatus -eq "Supervisor Approved") $res.errorMessage
+
+# ---------------- Lab Manager: Cancel, Archive, Restore
+function StatusChange($token, $versionID, $action) {
+    Call POST "Document/DocumentStatusChange" $token @{ versionID = $versionID; action = $action; userID = 0; comments = "test" }
+}
+$r = StatusChange $S $v5 "Cancel"
+Check "Supervisor cannot cancel (Lab Manager only)" ($r.Status -eq 403) $r.Status
+$r = StatusChange $M $v5 "Cancel"
+$st5 = ((Call GET "Document/DocumentHistory?documentId=$doc" $C).Body.versions | Where-Object revisionNo -eq 5).statusName
+$row = (List $C $num)[0]
+Check "Manager cancels the pending revision -> rev 5 Cancelled; list keeps showing the approved rev 3 in use" ($r.Body.errorMessage -eq "" -and $st5 -eq "Cancelled" -and $row.revisionNo -eq 3 -and $row.versionStatus -eq "Approved") "$($r.Body.errorMessage) rev5=$st5 list=$($row.revisionNo) $($row.versionStatus)"
+$erow = (List $E $num $true)[0]
+Check "After cancel, employee still sees the approved revision" ($erow.revisionNo -eq 3 -and $erow.versionStatus -eq "Approved") "$($erow.revisionNo) $($erow.versionStatus)"
+Check "A cancelled revision cannot be cancelled again" ((StatusChange $M $v5 "Cancel").Body.errorMessage -ne "")
+$r = StatusChange $M $v3 "Archive"
+$row = (List $C $num)[0]
+Check "Manager archives the approved document -> Archived" ($r.Body.errorMessage -eq "" -and $row.versionStatus -eq "Archived") "$($r.Body.errorMessage) $($row.versionStatus)"
+Check "Archived document hidden from employees" ((List $E $num $true).Count -eq 0)
+$r = Form "Document/DocumentVersionCreate" $C @{ DocumentID = $doc; ReasonForChange = "Test reason"; ChangeSummary = "x" } $f1
+Check "No new revision while archived" ($r.errorMessage -like "*Archived*") $r.errorMessage
+$r = StatusChange $M $v3 "Restore"
+$erow = (List $E $num $true)[0]
+Check "Manager restores it -> Approved, employee sees it again" ($r.Body.errorMessage -eq "" -and $erow.revisionNo -eq 3 -and $erow.versionStatus -eq "Approved") "$($r.Body.errorMessage) $($erow.versionStatus)"
+
+# Archive straight from Under Approval, then restore back to Under Approval
+$r = Form "Document/DocumentVersionCreate" $C @{ DocumentID = $doc; ReasonForChange = "Test reason"; ChangeSummary = "For archive test" } $f2
+$v6 = $r.id; Submit $C $v6 | Out-Null; Decide $S $v6 "Approved" "" | Out-Null
+$r = StatusChange $M $v6 "Archive"
+$st6 = ((Call GET "Document/DocumentHistory?documentId=$doc" $C).Body.versions | Where-Object revisionNo -eq 6).statusName
+Check "Manager archives a revision that is Under Approval -> Archived" ($r.Body.errorMessage -eq "" -and $st6 -eq "Archived") "$($r.Body.errorMessage) $st6"
+$r = StatusChange $M $v6 "Restore"
+$st6 = ((Call GET "Document/DocumentHistory?documentId=$doc" $C).Body.versions | Where-Object revisionNo -eq 6).statusName
+Check "Restore puts it back to Under Approval" ($r.Body.errorMessage -eq "" -and $st6 -eq "Supervisor Approved") "$($r.Body.errorMessage) $st6"
+Check "Manager can still approve it after restore" ((Decide $M $v6 "Approved" "").errorMessage -eq "")
 
 Remove-Item $tmp -Recurse -Force
 Write-Output ""

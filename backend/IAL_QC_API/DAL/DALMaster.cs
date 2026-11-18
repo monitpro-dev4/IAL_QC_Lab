@@ -56,6 +56,30 @@ namespace IAL_QC_API.DAL
 
         //=========================== Document categories ===========================
 
+        public List<DepartmentModel> DepartmentGet(string isActive, SqlConnection conn)
+        {
+            var list = new List<DepartmentModel>();
+            using SqlCommand cmd = DBHelper.StoredProcedure("[DepartmentGet]", conn);
+            cmd.Add("@IsActive", string.IsNullOrWhiteSpace(isActive) ? null : isActive);
+            conn.Open();
+            using SqlDataReader r = cmd.ExecuteReader();
+            while (r.Read())
+                list.Add(new DepartmentModel { DepartmentID = r.Int("DepartmentID"), DepartmentName = r.Str("DepartmentName"), IsActive = r.Str("IsActive") });
+            return list;
+        }
+
+        public List<PlantAreaModel> PlantAreaGet(string isActive, SqlConnection conn)
+        {
+            var list = new List<PlantAreaModel>();
+            using SqlCommand cmd = DBHelper.StoredProcedure("[PlantAreaGet]", conn);
+            cmd.Add("@IsActive", string.IsNullOrWhiteSpace(isActive) ? null : isActive);
+            conn.Open();
+            using SqlDataReader r = cmd.ExecuteReader();
+            while (r.Read())
+                list.Add(new PlantAreaModel { PlantAreaID = r.Int("PlantAreaID"), PlantAreaName = r.Str("PlantAreaName"), IsActive = r.Str("IsActive") });
+            return list;
+        }
+
         public List<DocumentCategoryModel> DocumentCategoryGet(string isActive, SqlConnection conn)
         {
             var list = new List<DocumentCategoryModel>();

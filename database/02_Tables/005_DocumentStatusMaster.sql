@@ -40,7 +40,9 @@ USING (VALUES
     (3, 'Supervisor Approved', 'Waiting for Lab Manager approval (level 2)'),
     (4, 'Approved',            'Current approved version, visible to all users'),
     (5, 'Rejected',            'Sent back to the chemist for changes'),
-    (6, 'Superseded',          'Older version, kept in history')
+    (6, 'Superseded',          'Older version, kept in history'),
+    (7, 'Cancelled',           'Pending revision cancelled by the Lab Manager'),
+    (8, 'Archived',            'Approved document retired from use; can be restored')
 ) AS s (StatusID, StatusName, StatusDesc)
 ON t.StatusID = s.StatusID
 WHEN NOT MATCHED THEN

@@ -44,6 +44,24 @@ namespace IAL_QC_API.Controllers
             return dalMaster.RoleMasterInsertUpdate(model, conn);
         }
 
+        //=========================== Departments / Plant & areas ===========================
+
+        [HttpGet]
+        [Route("DepartmentGet")]
+        public List<DepartmentModel> DepartmentGet(string isActive = "Y")
+        {
+            using SqlConnection conn = GetConnection();
+            return dalMaster.DepartmentGet(isActive, conn);
+        }
+
+        [HttpGet]
+        [Route("PlantAreaGet")]
+        public List<PlantAreaModel> PlantAreaGet(string isActive = "Y")
+        {
+            using SqlConnection conn = GetConnection();
+            return dalMaster.PlantAreaGet(isActive, conn);
+        }
+
         //=========================== Document categories ===========================
 
         [HttpGet]

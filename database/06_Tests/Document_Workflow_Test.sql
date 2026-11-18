@@ -56,7 +56,7 @@ SAVE TRAN t17;
 EXEC DocumentVersionCreate @D,'x.docx','x.docx','D:\Files',NULL,1,NULL,@C,@X OUTPUT;
 SELECT @chk = CONCAT('rev 2 now status ',(SELECT StatusID FROM DocumentVersion WHERE VersionID=@V2),', rev ',(SELECT RevisionNo FROM DocumentVersion WHERE VersionID=@X),' status ',(SELECT StatusID FROM DocumentVersion WHERE VersionID=@X)); PRINT '17 second revision while waiting -> ' + @chk;
 ROLLBACK TRAN t17;
-CREATE TABLE #l (DocumentID INT, DocumentNumber VARCHAR(50), Title VARCHAR(200), CategoryID INT, CategoryCode VARCHAR(10), CategoryName VARCHAR(100), IsActive CHAR(1), VersionID INT, RevisionNo INT, VersionStatus VARCHAR(50), OriginalFileName VARCHAR(255), StoredFileName VARCHAR(255), FilePath VARCHAR(500), FileType VARCHAR(10), FileSizeKB INT, EditedBy VARCHAR(100), ReviewedBy VARCHAR(100), ApprovedBy VARCHAR(100), IssuedDate DATE, PendingVersionID INT, PendingRevisionNo INT, PendingStatus VARCHAR(50));
+CREATE TABLE #l (DocumentID INT, DocumentNumber VARCHAR(50), Title VARCHAR(200), CategoryID INT, CategoryCode VARCHAR(10), CategoryName VARCHAR(100), IsActive CHAR(1), VersionID INT, RevisionNo INT, VersionStatus VARCHAR(50), OriginalFileName VARCHAR(255), StoredFileName VARCHAR(255), FilePath VARCHAR(500), FileType VARCHAR(10), FileSizeKB INT, EditedBy VARCHAR(100), ReviewedBy VARCHAR(100), ApprovedBy VARCHAR(100), IssuedDate DATE, PendingVersionID INT, PendingRevisionNo INT, PendingStatus VARCHAR(50), ChangeSummary VARCHAR(500), Department VARCHAR(100), PlantArea VARCHAR(100));
 INSERT INTO #l EXEC DocumentList NULL,0,1,'Y';
 SELECT @chk = CONCAT(DocumentNumber,' shows rev ',RevisionNo,' ',VersionStatus,', pending rev ',PendingRevisionNo,' ',PendingStatus) FROM #l; DELETE #l;
 PRINT '18 list while rev 2 is draft   -> ' + @chk;

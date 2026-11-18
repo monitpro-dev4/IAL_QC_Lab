@@ -27,7 +27,8 @@ CREATE OR ALTER PROCEDURE dbo.DocumentVersionCreate
     @ChangeSummary     VARCHAR(500)  = NULL,
     @UserID            INT,
     @NewVersionID      INT OUTPUT,
-    @Title             VARCHAR(200)  = NULL    -- NULL / empty = keep the current title
+    @Title             VARCHAR(200)  = NULL,   -- NULL / empty = keep the current title
+    @ReasonForChange   VARCHAR(500)  = NULL    -- added 2026-11-11
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -66,6 +67,13 @@ BEGIN
             RETURN;
         END
 
+        IF EXISTS (SELECT 1 FROM dbo.Document d JOIN dbo.DocumentVersion cv ON cv.VersionID = d.CurrentVersionID
+                   WHERE d.DocumentID = @DocumentID AND cv.StatusID = 8)
+        BEGIN
+            RAISERROR ('This Document Is Archived - Restore It Before Uploading A New Revision', 11, 1);
+            RETURN;
+        END
+
         -- The revision still in the approval flow (or rejected) is kept in history as Superseded
         INSERT INTO dbo.DocumentApprovalLog (VersionID, ActionType, ApprovalLevel, FromStatusID, ToStatusID, Comments, ActionBy, ActionOn)
         SELECT VersionID, 'Superseded', NULL, StatusID, 6, 'Replaced by a newer revision', @UserID, GETDATE()
@@ -85,9 +93,9 @@ BEGIN
         FROM dbo.DocumentVersion WHERE DocumentID = @DocumentID;
 
         INSERT INTO dbo.DocumentVersion (DocumentID, RevisionNo, OriginalFileName, StoredFileName, FilePath,
-                                         FileType, FileSizeKB, ChangeSummary, StatusID, EditedBy, CreatedBy, CreatedOn)
+                                         FileType, FileSizeKB, ChangeSummary, ReasonForChange, StatusID, EditedBy, CreatedBy, CreatedOn)
         VALUES (@DocumentID, @NextRevision, @OriginalFileName, @StoredFileName, @FilePath,
-                @FileType, @FileSizeKB, @ChangeSummary, 1, @UserID, @UserID, GETDATE());
+                @FileType, @FileSizeKB, @ChangeSummary, NULLIF(LTRIM(RTRIM(@ReasonForChange)), ''), 1, @UserID, @UserID, GETDATE());
         SET @NewVersionID = SCOPE_IDENTITY();
 
         INSERT INTO dbo.DocumentApprovalLog (VersionID, ActionType, ApprovalLevel, FromStatusID, ToStatusID, Comments, ActionBy, ActionOn)

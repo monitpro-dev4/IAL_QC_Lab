@@ -54,6 +54,28 @@ namespace IAL_QC_API.DAL
                     ActionOn = r.NDate("ActionOn")
                 });
             }
+            r.NextResult();
+            while (r.Read())
+            {
+                model.Months.Add(new DashboardMonth
+                {
+                    MonthStart = r.NDate("MonthStart") ?? DateTime.MinValue,
+                    Uploaded = r.Int("Uploaded"),
+                    Approved = r.Int("Approved"),
+                    Rejected = r.Int("Rejected")
+                });
+            }
+            r.NextResult();
+            if (r.Read())
+            {
+                model.ApprovalTime = new DashboardApprovalTime
+                {
+                    ApprovedRevisions = r.Int("ApprovedRevisions"),
+                    AvgTotalHours = r.NDec("AvgTotalHours"),
+                    AvgReviewHours = r.NDec("AvgReviewHours"),
+                    AvgManagerHours = r.NDec("AvgManagerHours")
+                };
+            }
             return model;
         }
     }

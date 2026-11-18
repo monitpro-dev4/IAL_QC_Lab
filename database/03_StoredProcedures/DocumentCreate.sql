@@ -32,7 +32,10 @@ CREATE OR ALTER PROCEDURE dbo.DocumentCreate
     @ChangeSummary     VARCHAR(500)  = NULL,
     @UserID            INT,
     @NewDocumentID     INT OUTPUT,
-    @NewVersionID      INT OUTPUT
+    @NewVersionID      INT OUTPUT,
+    @Department        VARCHAR(100)  = NULL,   -- added 2026-11-11
+    @PlantArea         VARCHAR(100)  = NULL,   -- added 2026-11-11
+    @Remarks           VARCHAR(500)  = NULL    -- added 2026-11-17: the document's remarks
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -91,8 +94,9 @@ BEGIN
 
         IF @@TRANCOUNT = 0 BEGIN BEGIN TRANSACTION; SET @OwnTran = 1; END
 
-        INSERT INTO dbo.Document (DocumentNumber, Title, CategoryID, IsActive, CreatedBy, CreatedOn)
-        VALUES (@DocumentNumber, @Title, @CategoryID, 'Y', @UserID, GETDATE());
+        INSERT INTO dbo.Document (DocumentNumber, Title, CategoryID, Department, PlantArea, Remarks, IsActive, CreatedBy, CreatedOn)
+        VALUES (@DocumentNumber, @Title, @CategoryID, NULLIF(LTRIM(RTRIM(@Department)), ''),
+                NULLIF(LTRIM(RTRIM(@PlantArea)), ''), NULLIF(LTRIM(RTRIM(@Remarks)), ''), 'Y', @UserID, GETDATE());
         SET @NewDocumentID = SCOPE_IDENTITY();
 
         INSERT INTO dbo.DocumentVersion (DocumentID, RevisionNo, OriginalFileName, StoredFileName, FilePath,

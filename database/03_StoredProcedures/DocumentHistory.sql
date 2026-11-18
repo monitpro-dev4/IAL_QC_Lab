@@ -20,7 +20,7 @@ BEGIN
     BEGIN TRY
         SELECT v.VersionID, v.RevisionNo, StatusName = s.StatusName,
                v.OriginalFileName, v.StoredFileName, v.FilePath, v.FileType, v.FileSizeKB,
-               v.ChangeSummary,
+               v.ChangeSummary, v.ReasonForChange,
                EditedBy = ue.Name, v.CreatedOn,
                v.SubmittedOn,
                ReviewedBy = ur.Name, v.ReviewedOn,

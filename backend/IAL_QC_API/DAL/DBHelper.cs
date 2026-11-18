@@ -51,6 +51,12 @@ namespace IAL_QC_API.DAL
             return v == DBNull.Value ? 0 : Convert.ToInt64(v);
         }
 
+        public static decimal? NDec(this SqlDataReader r, string col)
+        {
+            object v = r[col];
+            return v == DBNull.Value ? (decimal?)null : Convert.ToDecimal(v);
+        }
+
         public static DateTime? NDate(this SqlDataReader r, string col)
         {
             object v = r[col];
